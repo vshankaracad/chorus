@@ -46,27 +46,15 @@ t_par /= 511.
 t_per /= 511.
 t_bk  /= 511.
 
-# Let wce = wr, where wr is the reference plasma frequency
-# As such, c/wr = c/wce
-#.         1/wr = 1/wce
-
-# For given B0, the corresponding wce = e*B0/me = wr = sqrt( e^2 nr / (epsilon0*me) )
-#                   corresponding reference density nr = epsilon0 * B0^2/me 
 nr = epsilon_0*(B0*1e-9)**2/m_e*1e-6  # reference density, per cc
 n0_nr = n0/nr # n0 normalized to reference density
 n0b_nr = n0b/nr
 n0i_nr = n0i/nr
   
-# convert length unit from c/wpe to c/wce
-# n0/nr = wpe^2/wce^2 = n0_nr
-# so, c/wpe = (wce/wpe)*(c/wce) = (1/n0_nr)**.5 * (c/wce)
 lenx_cwr = lenx/n0_nr**0.5  # plasma length normalized to c/wr (i.e., c/wce)
 leny_cwr = leny/n0_nr**0.5
 Re_cwr   = Re/n0_nr**0.5
 
-# convert length unit from c/wpe to c/wpi
-# wpi^2 = (1/1836) wpe^2
-# so, c/wpe = (wpi/wpe) * (c/wpi) = (1/1836**.5) * (c/wpi)
 lenx_di = lenx/1836**0.5
 leny_di = leny/1836**0.5
   
@@ -159,50 +147,12 @@ Main(
 )
 
 
-## ------------ load balancing --------------
-#LoadBalancing(
-#    initial_balance = True,
-#    every = 5*Nt,
-#    cell_load = 1.,
-#    frozen_particle_load = 1.,
-#)
-
-#------------  vectorization ---------------
-# Vectorization(
-# 	mode = "adaptive",
-# 	reconfigure_every = 20,
-# 	initial_mode = "on"
-# )
-
-#---------- moving window --------------
-# MovingWindow(
-#     time_start = 0.,
-#     velocity_x = 1.,
-# )
-
 # -------------- filtering ---------------
 CurrentFilter(
     model = "binomial",
     passes = [10],
     kernelFIR = [0.25,0.5,0.25],
 )
-
-# FieldFilter(
-#     model = "Friedman",
-#     theta = 0.,
-# )
-
-
-# ----------------- laser pulse and/or external fields ----------------------
-# def time_envelope(t):
-#     if 0<t<tau: return( (np.sin(np.pi*t/tau))**2 )
-#     else: return (0)
-
-# a0=5.0; tau=100.0; focus=[plasma_start, box[1]/2.0, box[2]/2.0]; waist=3.0
-
-# LaserGaussian3D(box_side="xmin", a0=a0, omega=twopi, polarization_phi=0.0, 
-#                 ellipticity=0, focus=focus, waist=waist, incidence_angle=[0.0, 0.0], 
-#                 time_envelope=time_envelope,)
 
 M_sgn = -1 # sign of earth's magnetic momentum
 
@@ -332,11 +282,6 @@ Species(name = 'proton_bk', position_initialization = 'random', momentum_initial
 Species(name = 'elec_bk', position_initialization = 'random', momentum_initialization = 'maxwell-juettner', temperature = [t_bk, t_bk, t_bk], particles_per_cell = ppc_bk, mass = 1.0, charge = -1.0, number_density = den_profile_bk, boundary_conditions = [["reflective"]],)
 
 
-# plasma to inject 
-
-# initial plasma profile: a thin layer (1/20 of total box length) attached to xmin boundary
-# fp = trapezoidal(n0i_nr, xvacuum=0.,xplateau=box[0]/10.) 
-
 def den_profile_hot(x, y):
     x1 = x/Re_cwr + Lmin 
     y1 = y/Re_cwr - zmax
@@ -376,11 +321,6 @@ Species(name = 'proton', position_initialization = 'random', momentum_initializa
 
 Species(name = 'elec', position_initialization = 'random', momentum_initialization = 'maxwell-juettner', temperature = [temp_perp_hot, t_par, temp_perp_hot], mean_velocity = [inj_vel,0.,0.], particles_per_cell = ppc_hot, mass = 1.0, charge = -1.0, number_density = den_profile_hot, boundary_conditions = [["reflective"]],) # notice y is now the parallel direction (relative to B0)
 
-# ParticleInjector(species = "proton", box_side = "xmin",)
-
-# ParticleInjector(species = "elec", box_side  = "xmin",)
-
-
 
 #------------ diagnostics ----------------------
   
@@ -399,16 +339,9 @@ for i in range(5):
     x_probe = (l*np.sin(theta_probe[i])**2.-Lmin)*box[0]/(Lmax-Lmin)
     y_probe = l*np.sin(theta_probe[i])*np.cos(theta_probe[i])*0.5*box[1]/zmax+box[1]/2.
     DiagProbe(
-      # name = "LeftBndProbe",
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -421,16 +354,9 @@ for i in range(5):
     x_probe = (l*np.sin(theta_probe[i])**2.-Lmin)*box[0]/(Lmax-Lmin)
     y_probe = l*np.sin(theta_probe[i])*np.cos(theta_probe[i])*0.5*box[1]/zmax+box[1]/2.
     DiagProbe(
-      # name = "LeftBndProbe",
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -446,12 +372,6 @@ for i in range(5):
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -468,12 +388,6 @@ for i in range(5):
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -489,12 +403,6 @@ for i in range(5):
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -510,12 +418,6 @@ for i in range(5):
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -531,12 +433,6 @@ for i in range(5):
       every = [0, 20],
       flush_every = flush_freq,
       origin   = [x_probe, y_probe],
-      # corners  = [
-      #     [1., 0., box[2]],
-      #     [1., box[1], 0.],
-      #     #[1., box[1], box[2]],
-      # ],
-      # number   = [400, 380],
       fields   = ["Ex", "Ey", "Ez", "Bx", "By", "Bz"],
       # time_integral = True,
     )
@@ -582,30 +478,6 @@ DiagParticleBinning(deposited_quantity="weight_vx_px", every=[0, dump_freq], flu
 DiagParticleBinning(deposited_quantity="weight_vy_py", every=[0, dump_freq], flush_every = flush_freq, species=['elec_bk'], axes=[ ["x", 0, box[0], Nx], ["y", 0, box[1], Ny] ],)
 #7: zz pressure
 DiagParticleBinning(deposited_quantity="weight_vz_pz", every=[0, dump_freq], flush_every = flush_freq, species=['elec_bk'], axes=[ ["x", 0, box[0], Nx], ["y", 0, box[1], Ny] ],)
-
-
-#..............Screen diagnostics to get electron angular distribution...............
-
-# #0: electron spatial dist. 
-# DiagScreen(every = dump_freq, shape = "plane", point=[plasma_start+25.0, box[1]/2, box[2]/2], vector=[1,0,0], direction = "canceling", deposited_quantity = "weight", species = ['elec_central', 'elec_outer'], axes=[ ['a', -box[1]/2, box[1]/2, int(box[1]*10)], ['b', -box[2]/2, box[2]/2, int(box[2]*10)] ] )
-
-# #1: electron angular dist. 
-# DiagScreen(every = dump_freq, shape = "plane", point=[plasma_start+25.0, box[1]/2, box[2]/2], vector=[1,0,0], direction = "canceling", deposited_quantity = "weight", species = ['elec_central', 'elec_outer'], axes=[ [angle_y, -50, 50, 1000], [angle_z, -50, 50, 800] ] )
-
-# #2: electron spectrum 
-# DiagScreen(every = dump_freq, shape = "plane", point=[plasma_start+25.0, box[1]/2, box[2]/2], vector=[1,0,0], direction = "canceling", deposited_quantity = "weight", species = ['elec_central', 'elec_outer'], axes=[ ['a', -box[1]/2, box[1]/2, 1], ['b', -box[2]/2, box[2]/2, 1], ['ekin', 0, 100, 500] ] )
-
-# #3: electron spectrum (limited acceptance window)
-# DiagScreen(every = dump_freq, shape = "plane", point=[plasma_start+25.0, box[1]/2, box[2]/2], vector=[1,0,0], direction = "canceling", deposited_quantity = "weight", species = ['elec_central', 'elec_outer'], axes=[ ['a', -2., 2., 1], ['b', -2., 2., 1], ['ekin', 0, 100, 500] ] )
-
-# #4: proton spatial dist. 
-# DiagScreen(every = dump_freq, shape = "plane", point=[plasma_start+25.0, box[1]/2, box[2]/2], vector=[1,0,0], direction = "canceling", deposited_quantity = "weight", species = ['proton'], axes=[ ['a', -box[1]/2, box[1]/2, int(box[1]*10)], ['b', -box[2]/2, box[2]/2, int(box[2]*10)] ] )
-
-# #5: proton angular dist. 
-# DiagScreen(every = dump_freq, shape = "plane", point=[plasma_start+25.0, box[1]/2, box[2]/2], vector=[1,0,0], direction = "canceling", deposited_quantity = "weight", species = ['proton'], axes=[ [angle_y, -50, 50, 1000], [angle_z, -50, 50, 800] ] )
-
-
-
 #----------------------------- track particles -------------------------------
 Delta_L = Lmax - Lmin
 dL = Delta_L / (32*box[0]) * 60.0  # 400 cells
